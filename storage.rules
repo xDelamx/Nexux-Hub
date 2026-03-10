@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Regra para os PDFs de upload do curso
+    match /users/{userId}/pdfs/{fileName} {
+      // O usuário só pode ler e gravar o SEU PRÓPRIO arquivo PDF
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Bloquear todo o resto por padrão para evitar acesso não autorizado
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

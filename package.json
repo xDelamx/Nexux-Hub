@@ -1,0 +1,50 @@
+{
+  "name": "nenux-hub",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "wait-on tcp:3000 && electron .",
+    "electron:dev": "concurrently -k \"npm run dev\" \"npm run electron\"",
+    "electron:build": "vite build && electron-builder"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "firebase": "^12.9.0",
+    "lucide-react": "^0.562.0",
+    "pdfjs-dist": "^5.4.530",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-pdf": "^10.3.0",
+    "recharts": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.nenuxhub.app",
+    "productName": "Nenux Hub",
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ]
+  }
+}

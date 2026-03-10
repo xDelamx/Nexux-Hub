@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regra para Invites: Qualquer um pode *ler* um invite para validar se ele existe
+    // Mas apenas administradores reais poderiam criar ou alterar (aqui bloqueamos gravação cliente)
+    match /invites/{inviteId} {
+      allow read: if true;
+      allow write: if false; 
+      // Em produção real, a criação de invite seria no painel ou via Function,
+      // aqui abrimos a brecha de atualizar { valid: false } durante o registro!
+      // IMPORTANTE: para o sistema de invite atual funcionar (o próprio usuário gasta o código),
+      // precisamos permitir UPDATE se ele estiver alterando de valid:true para valid:false
+      allow update: if request.resource.data.valid == false 
+                    && resource.data.valid == true;
+    }
+
+    // Regras Gerais de Usuário
+    match /users/{userId} {
+      // O usuário só pode ler e escrever os PRÓPRIOS dados
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Regras em cascata para as subcoleções do usuário (tarefas, anotações, recursos, preferências)
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
