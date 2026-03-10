@@ -1,20 +1,20 @@
-# 🛡️ Nexus Hub
+# Nexus Hub
 
-**Nexus Hub** é uma plataforma SaaS (Software as a Service) desenvolvida para centralizar e modernizar a gestão de equipes de segurança e operações de múltiplos postos. 
+**Nexus Hub** é uma plataforma SaaS (Software as a Service) desenvolvida para centralizar e modernizar a gestão de tarefas. 
 
-Desenvolvido para substituir planilhas e controles manuais, o sistema oferece controle em tempo real para gestores de shoppings, condomínios e plantas industriais.
+Desenvolvido para substituir planilhas e controles manuais, o sistema oferece controle em tempo real
 
-🔗 **[Acessar o Sistema em Produção](https://nexux-hub.vercel.app)**
+**[Acessar o Sistema em Produção](https://nexux-hub.vercel.app)**
 
-## 🚀 Principais Funcionalidades
+## Principais Funcionalidades
 
 * **Painel de Controle (Dashboard):** Visão geral da operação em tempo real.
-* **Módulo Operacional:** Registro de ocorrências, controle de frota e acompanhamento de rondas via QR Code.
-* **Gestão de Tarefas:** Distribuição e acompanhamento de atividades da equipe.
-* **Sistema de Convites:** Criação de contas seguras e controladas para diferentes postos de trabalho.
-* **Acesso Web e Mobile:** Interface responsiva que funciona na portaria ou no celular do supervisor.
+* **Módulo Operacional:** Registro de ocorrências, controle e acompanhamento.
+* **Gestão de Tarefas:** Distribuição e acompanhamento de atividades.
+* **Sistema de Convites:** Criação de contas seguras.
+* **Acesso Web e Mobile:** Interface responsiva.
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 O projeto foi construído utilizando as ferramentas mais modernas do mercado para garantir velocidade e segurança:
 
@@ -23,7 +23,7 @@ O projeto foi construído utilizando as ferramentas mais modernas do mercado par
 * **Estilização:** Tailwind CSS *(adicione se estiver usando)*
 * **Hospedagem Web:** Vercel
 
-## ⚙️ Como executar localmente
+## Como executar localmente
 
 Caso queira rodar o projeto em sua máquina:
 
