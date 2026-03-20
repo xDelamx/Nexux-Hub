@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, setDoc, deleteDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Task } from '../types';
@@ -38,7 +38,14 @@ export function useTasks() {
 
     const updateTask = async (taskId: string, updates: Partial<Task>) => {
         if (!user) return;
-        await updateDoc(doc(db, 'users', user.uid, 'tasks', taskId), updates);
+        // Strip undefined and null values — Firestore rejects them
+        const cleanUpdates: Record<string, any> = {};
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                cleanUpdates[key] = value;
+            }
+        });
+        await updateDoc(doc(db, 'users', user.uid, 'tasks', taskId), cleanUpdates);
     };
 
     const removeTask = async (taskId: string) => {

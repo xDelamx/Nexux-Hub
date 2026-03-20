@@ -50,8 +50,8 @@ const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
     const startOfLastWeek = new Date(startOfThisWeek);
     startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
 
-    const thisWeekTasks = tasks.filter(t => t.completedAt && t.completedAt >= startOfThisWeek.getTime());
-    const lastWeekTasks = tasks.filter(t => t.completedAt && t.completedAt >= startOfLastWeek.getTime() && t.completedAt < startOfThisWeek.getTime());
+    const thisWeekTasks = tasks.filter(t => (t.status === TaskStatus.DONE || (t.status as any) === 'Done') && t.completedAt && t.completedAt > 0 && t.completedAt >= startOfThisWeek.getTime());
+    const lastWeekTasks = tasks.filter(t => (t.status === TaskStatus.DONE || (t.status as any) === 'Done') && t.completedAt && t.completedAt > 0 && t.completedAt >= startOfLastWeek.getTime() && t.completedAt < startOfThisWeek.getTime());
 
     const calcTrend = (current: number, previous: number): Trend | undefined => {
       if (previous === 0) return undefined; // Sem dados anteriores, não exibe tendência
@@ -65,9 +65,9 @@ const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
     const thisWeekMinutes = thisWeekTasks.reduce((acc, t) => acc + (t.minutesSpent || 0), 0);
     const lastWeekMinutes = lastWeekTasks.reduce((acc, t) => acc + (t.minutesSpent || 0), 0);
 
-    const completed = tasks.filter(t => t.status === TaskStatus.DONE).length;
-    const active = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
-    const pending = tasks.filter(t => t.status === TaskStatus.PENDING).length;
+    const completed = tasks.filter(t => t.status === TaskStatus.DONE || (t.status as any) === 'Done').length;
+    const active = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS || (t.status as any) === 'In Progress').length;
+    const pending = tasks.filter(t => t.status === TaskStatus.PENDING || (t.status as any) === 'Pending').length;
 
     return {
       totalMinutes,

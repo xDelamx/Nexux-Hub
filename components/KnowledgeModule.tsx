@@ -16,87 +16,92 @@ type ModalType = 'NOTEBOOK' | 'SECTION' | 'PAGE' | null;
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 // ─── Rich Text Toolbar ────────────────────────────────────────────────────────
-const ToolbarBtn: React.FC<{ onClick: () => void; title: string; children: React.ReactNode }> = ({ onClick, title, children }) => (
+// ─── Rich Text Toolbar ────────────────────────────────────────────────────────
+const ToolbarBtn: React.FC<{ onClick: () => void; title: string; active?: boolean; children: React.ReactNode }> = ({ onClick, title, active, children }) => (
   <button
     onMouseDown={(e) => { e.preventDefault(); onClick(); }}
     title={title}
-    className="p-2 hover:bg-blue-600/15 active:bg-blue-600/25 rounded-lg text-hub-muted hover:text-blue-400 transition-colors flex items-center justify-center"
+    className={`p-2 rounded-lg transition-all flex items-center justify-center ${
+      active 
+        ? 'bg-blue-600/20 text-blue-400 shadow-sm ring-1 ring-blue-500/30' 
+        : 'hover:bg-blue-600/10 text-hub-muted hover:text-blue-300'
+    }`}
   >
     {children}
   </button>
 );
 
-const ToolbarSep = () => <div className="h-5 w-px bg-card-border mx-1 shrink-0" />;
+const ToolbarSep = () => <div className="h-6 w-px bg-card-border/60 mx-1 shrink-0" />;
 
-const RichToolbar: React.FC = () => {
+const RichToolbar: React.FC<{ activeTools: Set<string> }> = ({ activeTools }) => {
   const exec = (cmd: string, val?: string) => document.execCommand(cmd, false, val);
 
   return (
-    <div className="bg-sidebar/40 border-b border-card-border px-4 py-2 flex items-center gap-1 overflow-x-auto scrollbar-none flex-wrap">
-      {/* Headings */}
-      <ToolbarBtn onClick={() => exec('formatBlock', 'h1')} title="Título H1"><Heading1 size={16} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('formatBlock', 'h2')} title="Título H2"><Heading2 size={16} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('formatBlock', 'h3')} title="Título H3"><Heading3 size={16} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('formatBlock', 'p')} title="Parágrafo Normal"><Type size={16} /></ToolbarBtn>
+    <div className="bg-sidebar/30 backdrop-blur-md border-b border-card-border px-6 py-3 flex items-center gap-1 overflow-x-auto scrollbar-none flex-nowrap shadow-sm">
+      <div className="flex items-center gap-0.5 pr-3 border-r border-card-border/50 mr-2">
+        <ToolbarBtn onClick={() => exec('formatBlock', 'h1')} title="Título H1"><Heading1 size={16} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('formatBlock', 'h2')} title="Título H2"><Heading2 size={16} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('formatBlock', 'h3')} title="Título H3"><Heading3 size={16} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('formatBlock', 'p')} title="Texto"><Type size={16} /></ToolbarBtn>
+      </div>
+
+      <div className="flex items-center gap-0.5">
+        <ToolbarBtn onClick={() => exec('bold')} title="Negrito (Ctrl+B)" active={activeTools.has('bold')}><Bold size={15} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('italic')} title="Itálico (Ctrl+I)" active={activeTools.has('italic')}><Italic size={15} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('underline')} title="Sublinhado (Ctrl+U)" active={activeTools.has('underline')}><Underline size={15} /></ToolbarBtn>
+      </div>
       <ToolbarSep />
 
-      {/* Text style */}
-      <ToolbarBtn onClick={() => exec('bold')} title="Negrito (Ctrl+B)"><Bold size={15} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('italic')} title="Itálico (Ctrl+I)"><Italic size={15} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('underline')} title="Sublinhado (Ctrl+U)"><Underline size={15} /></ToolbarBtn>
+      <div className="flex items-center gap-0.5">
+        <ToolbarBtn onClick={() => exec('justifyLeft')} title="Alinhar Esquerda" active={activeTools.has('left')}><AlignLeft size={15} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('justifyCenter')} title="Centralizar" active={activeTools.has('center')}><AlignCenter size={15} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('justifyRight')} title="Alinhar Direita" active={activeTools.has('right')}><AlignRight size={15} /></ToolbarBtn>
+      </div>
       <ToolbarSep />
 
-      {/* Alignment */}
-      <ToolbarBtn onClick={() => exec('justifyLeft')} title="Alinhar Esquerda"><AlignLeft size={15} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('justifyCenter')} title="Centralizar"><AlignCenter size={15} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('justifyRight')} title="Alinhar Direita"><AlignRight size={15} /></ToolbarBtn>
+      <div className="flex items-center gap-0.5">
+        <ToolbarBtn onClick={() => exec('insertUnorderedList')} title="Lista de Marcadores" active={activeTools.has('list')}><List size={15} /></ToolbarBtn>
+        <ToolbarBtn onClick={() => exec('insertOrderedList')} title="Lista Numerada" active={activeTools.has('orderedList')}><ListOrdered size={15} /></ToolbarBtn>
+      </div>
       <ToolbarSep />
 
-      {/* Lists */}
-      <ToolbarBtn onClick={() => exec('insertUnorderedList')} title="Lista com marcadores"><List size={15} /></ToolbarBtn>
-      <ToolbarBtn onClick={() => exec('insertOrderedList')} title="Lista numerada"><ListOrdered size={15} /></ToolbarBtn>
-      <ToolbarSep />
-
-      {/* Font size */}
-      <select
-        onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => exec('fontSize', e.target.value)}
-        defaultValue=""
-        className="bg-transparent border border-card-border text-hub-muted text-xs rounded-lg px-2 py-1 cursor-pointer hover:border-blue-500 transition-colors outline-none"
-        title="Tamanho da fonte"
-      >
-        <option value="" disabled>Tamanho</option>
-        <option value="1">Muito Pequeno</option>
-        <option value="2">Pequeno</option>
-        <option value="3">Normal</option>
-        <option value="4">Médio</option>
-        <option value="5">Grande</option>
-        <option value="6">Maior</option>
-        <option value="7">Máximo</option>
-      </select>
-
-      {/* Text color */}
-      <label title="Cor do texto" className="flex items-center cursor-pointer ml-1 group">
-        <span className="text-hub-muted group-hover:text-blue-400 transition-colors mr-1" style={{ fontSize: 14 }}>A</span>
-        <input
-          type="color"
-          defaultValue="#ffffff"
+      <div className="flex items-center gap-2 px-2">
+        <select
           onMouseDown={(e) => e.stopPropagation()}
-          onChange={(e) => exec('foreColor', e.target.value)}
-          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent"
-          title="Cor do texto"
-        />
-      </label>
-      <ToolbarSep />
+          onChange={(e) => exec('fontSize', e.target.value)}
+          defaultValue=""
+          className="bg-black/20 border border-card-border text-hub-muted text-[10px] font-bold uppercase tracking-wider rounded-lg px-3 py-1.5 cursor-pointer hover:border-blue-500/50 transition-colors outline-none focus:ring-1 focus:ring-blue-500/30 font-sans"
+          title="Tamanho da fonte"
+        >
+          <option value="" disabled>Tamanho</option>
+          <option value="1">XS</option>
+          <option value="2">SM</option>
+          <option value="3">MD</option>
+          <option value="4">LG</option>
+          <option value="5">XL</option>
+          <option value="6">2XL</option>
+          <option value="7">3XL</option>
+        </select>
 
-      {/* Highlighter Markers */}
-      <div className="flex items-center gap-1.5 ml-1 group">
-        <Highlighter size={14} className="text-hub-muted mr-1" />
-        <button onClick={() => exec('hiliteColor', '#fef08a')} className="w-5 h-5 rounded-md bg-yellow-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Amarelo" />
-        <button onClick={() => exec('hiliteColor', '#bbf7d0')} className="w-5 h-5 rounded-md bg-green-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Verde" />
-        <button onClick={() => exec('hiliteColor', '#bfdbfe')} className="w-5 h-5 rounded-md bg-blue-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Azul" />
-        <button onClick={() => exec('hiliteColor', '#fbcfe8')} className="w-5 h-5 rounded-md bg-pink-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Rosa" />
-        <button onClick={() => exec('hiliteColor', 'transparent')} className="p-1.5 text-hub-muted hover:text-red-500 transition-colors ml-1" title="Limpar Marcação"><Eraser size={14} /></button>
+        <label title="Cor do texto" className="flex items-center cursor-pointer group bg-black/20 px-2 py-1 rounded-lg border border-card-border hover:border-blue-500/50 transition-all">
+          <Type size={12} className="text-hub-muted group-hover:text-blue-400 mr-2" />
+          <input
+            type="color"
+            defaultValue="#ffffff"
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => exec('foreColor', e.target.value)}
+            className="w-4 h-4 rounded-sm cursor-pointer border-0 bg-transparent p-0"
+          />
+        </label>
+      </div>
+
+      <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-card-border/50">
+        <Highlighter size={14} className="text-hub-muted mr-1 opacity-50" />
+        <button onClick={() => exec('hiliteColor', '#fef08a')} className="w-5 h-5 rounded-full bg-yellow-200 hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20 active:scale-95 border border-white/10" title="Marca-texto Amarelo" />
+        <button onClick={() => exec('hiliteColor', '#bbf7d0')} className="w-5 h-5 rounded-full bg-green-200 hover:scale-110 transition-transform shadow-lg shadow-green-500/20 active:scale-95 border border-white/10" title="Marca-texto Verde" />
+        <button onClick={() => exec('hiliteColor', '#bfdbfe')} className="w-5 h-5 rounded-full bg-blue-200 hover:scale-110 transition-transform shadow-lg shadow-blue-500/20 active:scale-95 border border-white/10" title="Marca-texto Azul" />
+        <button onClick={() => exec('hiliteColor', '#fbcfe8')} className="w-5 h-5 rounded-full bg-pink-200 hover:scale-110 transition-transform shadow-lg shadow-pink-500/20 active:scale-95 border border-white/10" title="Marca-texto Rosa" />
+        <button onClick={() => exec('hiliteColor', 'transparent')} className="p-1.5 text-hub-muted hover:text-red-500 transition-colors ml-1 active:scale-90" title="Limpar Marcação"><Eraser size={14} /></button>
       </div>
     </div>
   );
@@ -207,6 +212,31 @@ const KnowledgeModule: React.FC = () => {
     isOpen: boolean; type: ModalType; targetId?: string; secondaryId?: string; inputValue: string;
   }>({ isOpen: false, type: null, inputValue: '' });
 
+  // ─── Active Tool State ──────────────────────────────────────────────────
+  const [activeTools, setActiveTools] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (!editorRef.current) return;
+      const tools = new Set<string>();
+      try {
+        if (document.queryCommandState('bold')) tools.add('bold');
+        if (document.queryCommandState('italic')) tools.add('italic');
+        if (document.queryCommandState('underline')) tools.add('underline');
+        if (document.queryCommandState('insertUnorderedList')) tools.add('list');
+        if (document.queryCommandState('insertOrderedList')) tools.add('orderedList');
+        // Alignment check
+        if (document.queryCommandState('justifyLeft')) tools.add('left');
+        if (document.queryCommandState('justifyCenter')) tools.add('center');
+        if (document.queryCommandState('justifyRight')) tools.add('right');
+      } catch (e) { /* Ignore state errors */ }
+      setActiveTools(tools);
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, []);
+
   const [deleteModalState, setDeleteModalState] = useState<{
     isOpen: boolean; type: ModalType; targetId?: string; secondaryId?: string; thirdId?: string;
   }>({ isOpen: false, type: null });
@@ -231,7 +261,7 @@ const KnowledgeModule: React.FC = () => {
       const nb = notebooks.find(n => n.id === modalState.targetId);
       if (nb) {
         const pageId = 'p' + Date.now();
-        const newPage: Page = { id: pageId, title, content: '<p>Inicie sua anotação...</p>' };
+        const newPage: Page = { id: pageId, title, content: '' };
         const updatedNb = { ...nb, sections: nb.sections.map(sec => sec.id === modalState.secondaryId ? { ...sec, pages: [...sec.pages, newPage] } : sec) };
         await saveNotebook(updatedNb);
         setActivePageId(pageId);
@@ -357,7 +387,7 @@ const KnowledgeModule: React.FC = () => {
               </div>
 
               {/* Toolbar */}
-              <RichToolbar />
+              <RichToolbar activeTools={activeTools} />
 
               {/* Writing Area */}
               <div className="flex-1 relative overflow-hidden bg-app/20">
@@ -369,7 +399,7 @@ const KnowledgeModule: React.FC = () => {
                       suppressContentEditableWarning
                       onInput={handleEditorInput}
                       onKeyDown={(e) => { if (e.ctrlKey && e.key === 's') { e.preventDefault(); handleSave(); } }}
-                      className="knowledge-editor text-lg leading-relaxed text-hub-text outline-none min-h-[75vh] focus:ring-0"
+                      className="knowledge-editor relative text-lg leading-relaxed text-hub-text outline-none min-h-[75vh] focus:ring-0"
                       style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                     />
                   </div>

@@ -29,40 +29,39 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
-    const updates: Partial<Task> = { status: newStatus };
     const now = Date.now();
 
-    // ─── Time Tracking Logic ──────────────────────────────────────────────────
+    // Build a clean update object — NO null, NO undefined
+    const updates: Record<string, any> = { status: newStatus };
+
     if (newStatus === TaskStatus.IN_PROGRESS) {
-      // START / RESUME: Task is moving to "In Progress"
+      // Starting/resuming: record session start
       updates.lastStartedAt = now;
-      if (!task.startedAt) updates.startedAt = now; // First time it starts
+      if (!task.startedAt) updates.startedAt = now;
+
     } else {
-      // PAUSE / STOP: Task is moving OUT of "In Progress"
+      // Leaving IN_PROGRESS: accumulate elapsed minutes if possible
       if (task.status === TaskStatus.IN_PROGRESS && task.lastStartedAt) {
-        const diffMs = now - task.lastStartedAt;
-        const diffMin = Math.floor(diffMs / 60000); // Only count full minutes
-        // We accumulate minutesSpent. If it's the first time 0+diff, otherwise prev+diff.
-        updates.minutesSpent = (task.minutesSpent || 0) + diffMin;
+        const diffMin = Math.floor((now - task.lastStartedAt) / 60000);
+        updates.minutesSpent = (task.minutesSpent || 0) + Math.max(0, diffMin);
       }
-      // If moving out of progress, we clear the current session marker
-      updates.lastStartedAt = undefined as any;
+      // Firestore-safe field removal
+      updates.lastStartedAt = 0; // use 0 instead of null/undefined
     }
 
     if (newStatus === TaskStatus.DONE) {
       updates.completedAt = now;
-      // If it was already done but moved back and done again, we might want to ensure 
-      // minutesSpent exists. If it never went through "In Progress", fallback to estimate.
-      if (!updates.minutesSpent && !task.minutesSpent) {
+      if (!task.startedAt) updates.startedAt = now;
+      if (!task.minutesSpent && !updates.minutesSpent) {
         updates.minutesSpent = task.estimatedMinutes || 15;
       }
-    } else if (newStatus === TaskStatus.PENDING) {
-      updates.completedAt = undefined as any;
-      // We do NOT clear minutesSpent or startedAt when moving back to pending, 
-      // as it's now a "pause" mechanism.
+    } else {
+      // Not done: clear completedAt safely
+      updates.completedAt = 0; // use 0 as safe "not set"
     }
 
-    onUpdateTask(id, updates);
+    // Fire and forget — no blocking await needed here
+    onUpdateTask(id, updates as Partial<Task>);
   };
 
   const archiveTask = (id: string) => {
@@ -110,7 +109,8 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedTaskId(id);
-    e.dataTransfer.setData('taskId', id);
+    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.setData('taskId', id); // Keep for compatibility
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -121,7 +121,7 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
 
   const handleDrop = (e: React.DragEvent, targetStatus: TaskStatus) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
+    const taskId = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('taskId');
     if (taskId) {
       updateStatus(taskId, targetStatus);
     }
@@ -178,14 +178,14 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
             key={status}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, status)}
-            className="bg-card/40 border border-card-border rounded-3xl p-4 flex flex-col h-[calc(100vh-16rem)] shadow-sm transition-colors"
+            className={`bg-card/40 border border-card-border rounded-3xl p-4 flex flex-col h-[calc(100vh-16rem)] shadow-sm transition-all ${draggedTaskId ? 'ring-2 ring-blue-500/20 bg-blue-500/5' : ''}`}
           >
             <div className="flex items-center justify-between mb-5 px-2">
               <h3 className="font-black text-[11px] uppercase tracking-[0.15em] text-hub-muted flex items-center">
                 {status === TaskStatus.PENDING && <Circle size={14} className="text-amber-500 mr-2" />}
                 {status === TaskStatus.IN_PROGRESS && <Play size={14} className="text-blue-500 mr-2" />}
                 {status === TaskStatus.DONE && <CheckCircle2 size={14} className="text-emerald-500 mr-2" />}
-                {status === TaskStatus.PENDING ? 'Pendente' : status === TaskStatus.IN_PROGRESS ? 'Em Andamento' : 'Concluído'}
+                {status}
               </h3>
               <span className="bg-white/10 text-[10px] font-bold px-2 py-0.5 rounded-full text-hub-muted border border-card-border">
                 {activeTasks.filter(t => t.status === status).length}
@@ -245,9 +245,9 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                       {(status === TaskStatus.PENDING || status === TaskStatus.IN_PROGRESS) && (
                         <button
                           onClick={() => updateStatus(task.id, TaskStatus.DONE)}
-                          className="p-1.5 bg-emerald-600/10 text-emerald-500 rounded-lg hover:bg-emerald-600 hover:text-white transition-all"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/10 text-emerald-500 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
                         >
-                          <CheckCircle2 size={14} />
+                          <CheckCircle2 size={14} /> Concluir
                         </button>
                       )}
 
@@ -297,7 +297,7 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
               <div key={task.id} className="bg-card border border-card-border rounded-xl p-4 opacity-70 hover:opacity-100 transition-opacity group">
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/5 text-hub-muted border border-card-border">
-                    {task.status === TaskStatus.DONE ? 'Concluída' : 'Não finalizada'}
+                    {task.status === TaskStatus.DONE || (task.status as any) === 'Done' ? 'Concluída' : 'Não finalizada'}
                   </span>
                   <div className="flex space-x-1">
                     <button
