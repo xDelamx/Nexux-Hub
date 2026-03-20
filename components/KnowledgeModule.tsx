@@ -177,7 +177,6 @@ const KnowledgeModule: React.FC = () => {
   notebooksRef.current = notebooks;
   activePageIdRef.current = activePageId;
   tempDrawingDataRef.current = tempDrawingData;
-
   // Sync editor content ONLY when switching pages (not while typing)
   useEffect(() => {
     if (!isUserEditing.current && activePage && editorRef.current) {
@@ -192,19 +191,18 @@ const KnowledgeModule: React.FC = () => {
     }
   }, [activePageId]); // Only trigger on page ID change, not on activePage data changes
 
-  // Core save — uses refs so it never has stale state, safe to call from timers
-  const doSave = useCallback(async () => {
-    const currentPageId = activePageIdRef.current;
-    const currentNotebooks = notebooksRef.current;
-    const currentDrawingData = tempDrawingDataRef.current;
+  // ── Save logic using saveRef: always has fresh values, zero stale closures ──
+  const saveRef = useRef<() => Promise<void>>(async () => {});
 
-    if (!currentPageId || !editorRef.current) return;
+  // Update saveRef every render — captures latest notebooks, activePageId, etc. directly
+  saveRef.current = async () => {
+    if (!activePageId || !editorRef.current) return;
 
     let targetNb: Notebook | undefined;
     let targetSec: Section | undefined;
-    for (const nb of currentNotebooks) {
+    for (const nb of notebooks) {
       for (const sec of nb.sections) {
-        if (sec.pages.some(p => p.id === currentPageId)) { targetNb = nb; targetSec = sec; break; }
+        if (sec.pages.some(p => p.id === activePageId)) { targetNb = nb; targetSec = sec; break; }
       }
       if (targetNb) break;
     }
@@ -218,31 +216,39 @@ const KnowledgeModule: React.FC = () => {
         sec.id === targetSec!.id ? {
           ...sec,
           pages: sec.pages.map(p =>
-            p.id === currentPageId ? { ...p, content, drawingData: currentDrawingData || undefined } : p
+            p.id === activePageId ? { ...p, content, drawingData: tempDrawingData || undefined } : p
           )
         } : sec
       )
     };
     try {
       await saveNotebook(updatedNb);
+      console.log('Notebook saved successfully:', updatedNb.id);
       setSaveStatus('saved');
-      isUserEditing.current = false;
+      isUserEditing.current = false; // Reset editing flag after successful save
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
-    } catch {
+    } catch (e) {
+      console.error('Save failed error:', e);
       setSaveStatus('error');
     }
-  }, [saveNotebook]); // Only depends on saveNotebook — reads everything else from refs
+  };
 
-  // Manual save button handler
-  const handleSave = () => doSave();
+  const handleSave = () => {
+    console.log('Manual save triggered');
+    saveRef.current();
+  };
 
   // Auto-save: fires 1.5s after user stops typing
   const handleEditorInput = () => {
-    isUserEditing.current = true;
+    isUserEditing.current = true; // Set editing flag
+    console.log('Editor input detected, scheduling auto-save...');
     setSaveStatus('idle');
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => doSave(), 1500);
+    autoSaveTimerRef.current = setTimeout(() => {
+      console.log('Auto-save triggered');
+      saveRef.current();
+    }, 1500);
   };
 
   // ── Modal helpers ──
@@ -445,7 +451,20 @@ const KnowledgeModule: React.FC = () => {
                         <Palette size={13} className="mr-1.5" />
                         {isDrawingMode ? 'Concluir' : 'Canvas'}
                       </button>
-                      <SaveButton />
+                      {/* Save button — inline JSX to avoid React remounting on every render */}
+                      {saveStatus === 'saving' ? (
+                        <button disabled className="flex items-center px-4 py-2 bg-white/5 border border-card-border rounded-2xl text-blue-400 text-xs font-bold gap-2 opacity-70">
+                          <Loader2 size={15} className="animate-spin" /> Salvando...
+                        </button>
+                      ) : saveStatus === 'saved' ? (
+                        <button disabled className="flex items-center px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 text-xs font-bold gap-2">
+                          <Check size={15} /> Salvo!
+                        </button>
+                      ) : (
+                        <button onClick={handleSave} className="p-2.5 bg-white/5 border border-card-border rounded-2xl text-hub-muted hover:text-blue-500 hover:border-blue-500/40 transition-all active:scale-95" title="Salvar (Ctrl+S)">
+                          <Save size={18} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
