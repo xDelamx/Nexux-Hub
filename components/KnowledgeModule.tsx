@@ -208,27 +208,48 @@ const KnowledgeModule: React.FC = () => {
     }
     if (!targetNb || !targetSec) return;
 
+    // Utility to remove undefined fields recursively (Firestore hates undefined)
+    const cleanObject = (obj: any): any => {
+      const newObj: any = Array.isArray(obj) ? [] : {};
+      Object.keys(obj).forEach(key => {
+        if (obj[key] === undefined) return;
+        if (obj[key] !== null && typeof obj[key] === 'object') {
+          newObj[key] = cleanObject(obj[key]);
+        } else {
+          newObj[key] = obj[key];
+        }
+      });
+      return newObj;
+    };
+
     setSaveStatus('saving');
     const content = editorRef.current.innerHTML;
+    
     const updatedNb: Notebook = {
       ...targetNb,
       sections: targetNb.sections.map(sec =>
         sec.id === targetSec!.id ? {
           ...sec,
           pages: sec.pages.map(p =>
-            p.id === activePageId ? { ...p, content, drawingData: tempDrawingData || undefined } : p
+            p.id === activePageId ? { 
+              ...p, 
+              content, 
+              drawingData: tempDrawingData || null // Use null instead of undefined
+            } : p
           )
         } : sec
       )
     };
+
     try {
-      await saveNotebook(updatedNb);
-      console.log('Notebook saved successfully:', updatedNb.id);
+      const finalNb = cleanObject(updatedNb);
+      await saveNotebook(finalNb);
+      console.log('Notebook saved successfully:', finalNb.id);
       setSaveStatus('saved');
       isUserEditing.current = false; // Reset editing flag after successful save
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Save failed error:', e);
       setSaveStatus('error');
     }
