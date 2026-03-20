@@ -79,6 +79,13 @@ const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
     };
   }, [tasks]);
 
+  const formatMinutes = (total: number) => {
+    if (total < 60) return `${total} min`;
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  };
+
   // Agrupamento de dados para o gráfico de área baseado no filtro selecionado
   const areaChartData = useMemo(() => {
     if (timeRange === 'weekly') {
@@ -144,7 +151,7 @@ const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Cards de Estatísticas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total de Minutos" value={stats.totalMinutes} icon={<Clock size={20} />} color="blue" trend={stats.minutesTrend} />
+        <StatCard title="Tempo Produzido" value={formatMinutes(stats.totalMinutes)} icon={<Clock size={20} />} color="blue" trend={stats.minutesTrend} />
         <StatCard title="Tarefas Concluídas" value={stats.completed} icon={<CheckCircle size={20} />} color="emerald" trend={stats.completedTrend} />
         <StatCard title="Tarefas em Andamento" value={stats.active} icon={<TrendingUp size={20} />} color="blue" />
         <StatCard title="Pendências" value={stats.pending} icon={<AlertCircle size={20} />} color="amber" />
@@ -207,7 +214,7 @@ const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
                   labelStyle={{ color: 'var(--color-text-muted)', marginBottom: '4px', fontWeight: 'bold' }}
                   contentStyle={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}
                   itemStyle={{ color: 'var(--color-text)', fontSize: '12px' }}
-                  formatter={(value: any) => [`${value} min`, 'Esforço']}
+                  formatter={(value: any) => [formatMinutes(value), 'Esforço']}
                 />
                 <Area 
                   key={timeRange}
