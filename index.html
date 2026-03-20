@@ -84,6 +84,19 @@
         .animate-task-entry {
           animation: taskEntry 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+
+        /* Rich text editor typography */
+        .knowledge-editor h1 { font-size: 2rem; font-weight: 900; margin: 1.2rem 0 0.6rem; line-height: 1.2; }
+        .knowledge-editor h2 { font-size: 1.5rem; font-weight: 800; margin: 1rem 0 0.5rem; line-height: 1.3; }
+        .knowledge-editor h3 { font-size: 1.2rem; font-weight: 700; margin: 0.8rem 0 0.4rem; line-height: 1.4; }
+        .knowledge-editor p  { margin: 0.4rem 0; }
+        .knowledge-editor ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .knowledge-editor ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .knowledge-editor li { margin: 0.2rem 0; }
+        .knowledge-editor b, .knowledge-editor strong { font-weight: 800; }
+        .knowledge-editor i, .knowledge-editor em { font-style: italic; }
+        .knowledge-editor u { text-decoration: underline; }
+        .knowledge-editor [contenteditable]:empty:before { content: attr(data-placeholder); opacity: 0.3; pointer-events: none; }
     </style>
 <script type="importmap">
 {
@@ -96,8 +109,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="https://unpkg.com/react-pdf@9.2.1/dist/Page/AnnotationLayer.css" />
-<link rel="stylesheet" href="https://unpkg.com/react-pdf@9.2.1/dist/Page/TextLayer.css" />
+<!-- react-pdf CSS is imported via component -->
 <link rel="stylesheet" href="/index.css">
 </head>
 <body class="overflow-hidden">
