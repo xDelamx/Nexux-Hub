@@ -127,7 +127,7 @@ const OperationalModule: React.FC = () => {
       </div>
 
       {/* RESOURCES GRID */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {localResources.map((res, index) => (
           <div
             key={res.id}
@@ -142,49 +142,51 @@ const OperationalModule: React.FC = () => {
               href={res.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block h-full bg-card border border-card-border hover:border-blue-500/50 rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 active:scale-95 flex flex-col cursor-pointer"
+              className="flex items-center gap-4 p-4 bg-card border border-card-border hover:border-blue-500/50 rounded-2xl transition-all hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 active:scale-95 group cursor-pointer"
             >
-              <div className="relative h-32 w-full overflow-hidden bg-app">
+              {/* Square Logo Wrapper */}
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/5 flex-shrink-0 flex items-center justify-center border border-card-border group-hover:border-blue-500/30 transition-colors">
                 <img
                   src={res.imageUrl}
                   alt={res.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500"
                   onError={(e) => { (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + res.title }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-70"></div>
+              </div>
 
-                <div className="absolute top-2 left-2 bg-app/60 backdrop-blur-sm p-1 rounded-lg text-hub-muted opacity-0 group-hover:opacity-100 transition-opacity">
-                  <GripVertical size={14} />
-                </div>
-
-                <div className="absolute top-2 right-2 flex space-x-1">
-                  <div className="bg-app/80 backdrop-blur-md p-1.5 rounded-lg text-hub-muted group-hover:text-blue-500 transition-colors border border-card-border">
-                    <ExternalLink size={14} />
+              {/* Text Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col">
+                  <h4 className="text-hub-text font-bold text-sm mb-0.5 group-hover:text-blue-500 transition-colors line-clamp-1">
+                    {res.title}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-500 text-[10px] font-black uppercase tracking-widest opacity-60">
+                      {res.category}
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-card-border" />
+                    <div className="flex items-center text-hub-muted text-[10px] font-medium truncate opacity-40">
+                      <span className="truncate">{res.url.replace(/^https?:\/\//, '').split('/')[0]}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="mb-2">
-                  <span className="inline-block px-1.5 py-0.5 rounded bg-blue-600/10 text-blue-600 text-[9px] font-bold uppercase tracking-widest border border-blue-600/20">
-                    {res.category}
-                  </span>
-                </div>
+              {/* Action/Menu Indicator */}
+              <div className="text-hub-muted opacity-40 group-hover:opacity-100 transition-opacity">
+                <MoreVertical size={16} />
+              </div>
 
-                <h4 className="text-hub-text font-bold text-sm mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-1">
-                  {res.title}
-                </h4>
-
-                <div className="mt-auto flex items-center text-hub-muted text-[10px] font-medium truncate opacity-60 group-hover:opacity-100 transition-opacity">
-                  <Globe size={10} className="mr-1 flex-shrink-0" />
-                  <span className="truncate">{res.url.replace(/^https?:\/\//, '')}</span>
-                </div>
+              {/* Grip helper (optional on hover) */}
+              <div className="absolute left-1 top-1/2 -translate-y-1/2 text-hub-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                <GripVertical size={12} />
               </div>
             </a>
 
+            {/* Individual Trash Button - sleek overlay */}
             <button
               onClick={(e) => removeResource(res.id, e)}
-              className="absolute -top-1.5 -right-1.5 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:bg-red-500 z-10 border-2 border-app transform scale-75 group-hover:scale-100"
+              className="absolute -top-1 -right-1 w-6 h-6 bg-red-600/90 text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:bg-red-500 z-20 border border-white/10 backdrop-blur-sm"
               title="Remover Link"
             >
               <Trash2 size={12} />
@@ -195,10 +197,12 @@ const OperationalModule: React.FC = () => {
         {localResources.length === 0 && (
           <button
             onClick={() => setShowResourceModal(true)}
-            className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-card-border rounded-2xl text-hub-muted hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-600/5 transition-all"
+            className="flex items-center gap-4 p-4 border-2 border-dashed border-card-border rounded-2xl text-hub-muted hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-600/5 transition-all group"
           >
-            <Plus size={32} className="mb-2 opacity-20" />
-            <span className="text-xs font-bold">Adicionar</span>
+            <div className="w-16 h-16 rounded-xl border border-dashed border-card-border flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
+              <Plus size={24} className="opacity-20 group-hover:opacity-100" />
+            </div>
+            <span className="text-xs font-bold">Adicionar Recurso</span>
           </button>
         )}
       </div>
