@@ -1,11 +1,70 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus, Clock, CheckCircle2, Circle, Play, X, GripVertical,
   Flag, Calendar, Archive, Trash2, RotateCcw, ChevronDown, ChevronUp,
-  Loader2
+  Loader2, Check
 } from 'lucide-react';
 import { Task, TaskStatus, TaskPriority } from '../types';
+
+// ─── Custom Select Component ─────────────────────────────────────────────────
+interface SelectOption { value: string; label: string; accent?: string; dot?: string; icon?: React.ReactNode; }
+const CustomSelect: React.FC<{ value: string; onChange: (v: string) => void; options: SelectOption[]; placeholder?: string; }> = ({ value, onChange, options, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find(o => o.value === value);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`w-full flex items-center justify-between gap-3 bg-black/20 border rounded-2xl px-4 py-3.5 text-left transition-all ${
+          open ? 'border-blue-500/60 ring-2 ring-blue-600/10' : 'border-card-border hover:border-card-border/80'
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          {selected?.dot && <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${selected.dot}`} />}
+          {selected?.icon && selected.icon}
+          <span className={`text-sm font-bold truncate ${selected?.accent || 'text-hub-text'}`}>
+            {selected ? selected.label : <span className="text-hub-muted">{placeholder}</span>}
+          </span>
+        </div>
+        <ChevronDown size={16} className={`text-hub-muted flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180 text-blue-400' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-2 w-full bg-sidebar border border-card-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full flex items-center justify-between gap-3 px-4 py-3 transition-all text-left group ${
+                value === opt.value ? 'bg-blue-600/10' : 'hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                {opt.dot && <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dot}`} />}
+                {opt.icon && opt.icon}
+                <span className={`text-sm font-bold ${value === opt.value ? opt.accent || 'text-blue-400' : 'text-hub-text group-hover:text-hub-text'}`}>
+                  {opt.label}
+                </span>
+              </div>
+              {value === opt.value && <Check size={14} className="text-blue-400 flex-shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface TaskModuleProps {
   tasks: Task[];
@@ -360,54 +419,29 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                   <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
                     Prioridade
                   </label>
-                  <div className="flex gap-2">
-                    {[
-                      { value: TaskPriority.LOW, label: 'Baixa', color: 'emerald', dot: 'bg-emerald-500' },
-                      { value: TaskPriority.MEDIUM, label: 'Média', color: 'amber', dot: 'bg-amber-400' },
-                      { value: TaskPriority.HIGH, label: 'Alta', color: 'red', dot: 'bg-red-500' },
-                    ].map(({ value, label, color, dot }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setNewTaskPriority(value)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 ${
-                          newTaskPriority === value
-                            ? color === 'emerald'
-                              ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
-                              : color === 'amber'
-                              ? 'border-amber-400 bg-amber-400/15 text-amber-400 shadow-lg shadow-amber-400/10'
-                              : 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
-                            : 'border-card-border bg-black/10 text-hub-muted hover:bg-white/5 hover:border-card-border/80'
-                        }`}
-                      >
-                        <span className={`w-2 h-2 rounded-full ${newTaskPriority === value ? dot : 'bg-hub-muted/30'}`} />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <CustomSelect
+                    value={newTaskPriority}
+                    onChange={(v) => setNewTaskPriority(v as TaskPriority)}
+                    options={[
+                      { value: TaskPriority.LOW, label: 'Baixa', dot: 'bg-emerald-500', accent: 'text-emerald-400' },
+                      { value: TaskPriority.MEDIUM, label: 'Média', dot: 'bg-amber-400', accent: 'text-amber-400' },
+                      { value: TaskPriority.HIGH, label: 'Alta', dot: 'bg-red-500', accent: 'text-red-400' },
+                    ]}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
                     Categoria
                   </label>
-                  <div className="relative group">
-                    <input
-                      type="text"
-                      list="category-suggestions"
-                      className="w-full bg-black/20 border border-card-border rounded-2xl p-4 text-hub-text focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder-hub-muted"
-                      placeholder="Ex: Marketing, Admin..."
-                      value={newTaskCategory}
-                      onChange={(e) => setNewTaskCategory(e.target.value)}
-                    />
-                    <datalist id="category-suggestions">
-                      {Array.from(new Set(tasks.map(t => t.category))).filter(Boolean).map(cat => (
-                        <option key={cat} value={cat} />
-                      ))}
-                    </datalist>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 group-focus-within:opacity-100 transition-opacity">
-                      <ChevronDown size={18} className="text-hub-muted" />
-                    </div>
-                  </div>
+                  <CustomSelect
+                    value={newTaskCategory}
+                    onChange={setNewTaskCategory}
+                    placeholder="Selecionar categoria..."
+                    options={[
+                      ...Array.from(new Set(['Geral', ...tasks.map(t => t.category).filter(Boolean)]))
+                        .map(cat => ({ value: cat, label: cat }))
+                    ]}
+                  />
                 </div>
               </div>
 
