@@ -149,6 +149,11 @@ const KnowledgeModule: React.FC = () => {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUserEditing = useRef(false);
 
+  // --- Refs to always have fresh values inside timers (avoids stale closures) ---
+  const notebooksRef = useRef(notebooks);
+  const activePageIdRef = useRef(activePageId);
+  const tempDrawingDataRef = useRef(tempDrawingData);
+
   const [modalState, setModalState] = useState<{
     isOpen: boolean; type: ModalType; targetId?: string; secondaryId?: string; inputValue: string;
   }>({ isOpen: false, type: null, inputValue: '' });
@@ -170,6 +175,11 @@ const KnowledgeModule: React.FC = () => {
     return null;
   }, [notebooks, activePageId]);
 
+  // Keep refs in sync with latest state on every render
+  notebooksRef.current = notebooks;
+  activePageIdRef.current = activePageId;
+  tempDrawingDataRef.current = tempDrawingData;
+
   // Sync editor content ONLY when switching pages (not while typing)
   useEffect(() => {
     if (!isUserEditing.current && activePage && editorRef.current) {
@@ -184,14 +194,19 @@ const KnowledgeModule: React.FC = () => {
     }
   }, [activePageId]); // Only trigger on page ID change, not on activePage data changes
 
-  // Core save function
+  // Core save — uses refs so it never has stale state, safe to call from timers
   const doSave = useCallback(async () => {
-    if (!activePageId || !editorRef.current) return;
+    const currentPageId = activePageIdRef.current;
+    const currentNotebooks = notebooksRef.current;
+    const currentDrawingData = tempDrawingDataRef.current;
+
+    if (!currentPageId || !editorRef.current) return;
+
     let targetNb: Notebook | undefined;
     let targetSec: Section | undefined;
-    for (const nb of notebooks) {
+    for (const nb of currentNotebooks) {
       for (const sec of nb.sections) {
-        if (sec.pages.some(p => p.id === activePageId)) { targetNb = nb; targetSec = sec; break; }
+        if (sec.pages.some(p => p.id === currentPageId)) { targetNb = nb; targetSec = sec; break; }
       }
       if (targetNb) break;
     }
@@ -205,7 +220,7 @@ const KnowledgeModule: React.FC = () => {
         sec.id === targetSec!.id ? {
           ...sec,
           pages: sec.pages.map(p =>
-            p.id === activePageId ? { ...p, content, drawingData: tempDrawingData || undefined } : p
+            p.id === currentPageId ? { ...p, content, drawingData: currentDrawingData || undefined } : p
           )
         } : sec
       )
@@ -219,17 +234,17 @@ const KnowledgeModule: React.FC = () => {
     } catch {
       setSaveStatus('error');
     }
-  }, [activePageId, notebooks, tempDrawingData, saveNotebook]);
+  }, [saveNotebook]); // Only depends on saveNotebook — reads everything else from refs
 
-  // Handler for manual save button
+  // Manual save button handler
   const handleSave = () => doSave();
 
-  // Auto-save on typing (debounced 2s)
+  // Auto-save: fires 1.5s after user stops typing
   const handleEditorInput = () => {
     isUserEditing.current = true;
     setSaveStatus('idle');
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => doSave(), 2000);
+    autoSaveTimerRef.current = setTimeout(() => doSave(), 1500);
   };
 
   // ── Modal helpers ──
