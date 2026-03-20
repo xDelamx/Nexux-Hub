@@ -5,12 +5,12 @@ import {
   List, FolderPlus, FilePlus, BookOpen, ShieldAlert,
   Upload, ZoomIn, ZoomOut, ChevronLeft, FileUp, X as CloseIcon,
   Underline, ListOrdered, Check, Loader2, Heading1, Heading2, Heading3,
-  Type
+  Type, Highlighter, Eraser, X
 } from 'lucide-react';
 import { Document, Page as PDFPage, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import Canvas from './Canvas';
+// import Canvas from './Canvas'; // Removed pivot to highlighters
 import { Notebook, Section, Page } from '../types';
 import { useNotebooks } from '../hooks/useNotebooks';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,6 +97,17 @@ const RichToolbar: React.FC = () => {
           title="Cor do texto"
         />
       </label>
+      <ToolbarSep />
+
+      {/* Highlighter Markers */}
+      <div className="flex items-center gap-1 ml-1 group">
+        <Highlighter size={14} className="text-hub-muted mr-1" />
+        <button onClick={() => exec('hiliteColor', '#fef08a')} className="w-5 h-5 rounded-md bg-yellow-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Amarelo" />
+        <button onClick={() => exec('hiliteColor', '#bbf7d0')} className="w-5 h-5 rounded-md bg-green-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Verde" />
+        <button onClick={() => exec('hiliteColor', '#bfdbfe')} className="w-5 h-5 rounded-md bg-blue-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Azul" />
+        <button onClick={() => exec('hiliteColor', '#fbcfe8')} className="w-5 h-5 rounded-md bg-pink-200 hover:scale-110 transition-transform shadow-sm" title="Marca-texto Rosa" />
+        <button onClick={() => exec('hiliteColor', 'transparent')} className="p-1 text-hub-muted hover:text-red-500 transition-colors" title="Limpar Marcação"><Eraser size={14} /></button>
+      </div>
     </div>
   );
 };
@@ -140,8 +151,6 @@ const KnowledgeModule: React.FC = () => {
   const { notebooks, saveNotebook, deleteNotebook } = useNotebooks();
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [tempDrawingData, setTempDrawingData] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,7 +159,6 @@ const KnowledgeModule: React.FC = () => {
   // --- Refs to always have fresh values inside timers (avoids stale closures) ---
   const notebooksRef = useRef(notebooks);
   const activePageIdRef = useRef(activePageId);
-  const tempDrawingDataRef = useRef(tempDrawingData);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean; type: ModalType; targetId?: string; secondaryId?: string; inputValue: string;
@@ -176,18 +184,15 @@ const KnowledgeModule: React.FC = () => {
   // Keep refs in sync with latest state on every render
   notebooksRef.current = notebooks;
   activePageIdRef.current = activePageId;
-  tempDrawingDataRef.current = tempDrawingData;
   // Sync editor content ONLY when switching pages (not while typing)
   useEffect(() => {
     if (!isUserEditing.current && activePage && editorRef.current) {
-      setTempDrawingData(activePage.drawingData || null);
       if (editorRef.current.innerHTML !== activePage.content) {
         editorRef.current.innerHTML = activePage.content;
       }
     }
     if (!activePage && editorRef.current) {
       editorRef.current.innerHTML = '';
-      setTempDrawingData(null);
     }
   }, [activePageId]); // Only trigger on page ID change, not on activePage data changes
 
@@ -233,8 +238,7 @@ const KnowledgeModule: React.FC = () => {
           pages: sec.pages.map(p =>
             p.id === activePageId ? { 
               ...p, 
-              content, 
-              drawingData: tempDrawingData || null // Use null instead of undefined
+              content
             } : p
           )
         } : sec
@@ -465,14 +469,7 @@ const KnowledgeModule: React.FC = () => {
                   <div className="h-16 border-b border-card-border flex items-center justify-between px-6 bg-black/5 backdrop-blur-md shrink-0">
                     <h2 className="text-lg font-black text-hub-text truncate mr-4">{activePage.title}</h2>
                     <div className="flex items-center space-x-2 shrink-0">
-                      <button
-                        onClick={() => setIsDrawingMode(!isDrawingMode)}
-                        className={`flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDrawingMode ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'bg-white/5 text-hub-muted hover:text-hub-text border border-card-border'}`}
-                      >
-                        <Palette size={13} className="mr-1.5" />
-                        {isDrawingMode ? 'Concluir' : 'Canvas'}
-                      </button>
-                      {/* Save button — inline JSX to avoid React remounting on every render */}
+                      {/* Save feedback inline JSX */}
                       {saveStatus === 'saving' ? (
                         <button disabled className="flex items-center px-4 py-2 bg-white/5 border border-card-border rounded-2xl text-blue-400 text-xs font-bold gap-2 opacity-70">
                           <Loader2 size={15} className="animate-spin" /> Salvando...
@@ -494,11 +491,6 @@ const KnowledgeModule: React.FC = () => {
 
                   {/* Editor area */}
                   <div className="flex-1 relative overflow-hidden">
-                    {/* Drawing layer */}
-                    <div className={`absolute inset-0 z-10 ${isDrawingMode ? 'pointer-events-auto bg-blue-500/5 cursor-crosshair' : 'pointer-events-none'}`}>
-                      <Canvas key={activePageId} isDrawingEnabled={isDrawingMode} initialData={activePage.drawingData} onSave={(data) => setTempDrawingData(data)} />
-                    </div>
-
                     {/* Text layer */}
                     <div className="absolute inset-0 overflow-y-auto custom-scrollbar">
                       <div className="max-w-3xl mx-auto px-8 py-12 md:px-16">
