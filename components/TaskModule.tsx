@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus, Clock, CheckCircle2, Circle, Play, X, GripVertical,
@@ -133,7 +132,6 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
   const [newTaskCategory, setNewTaskCategory] = useState('Geral');
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
-  const [newTaskEstTime, setNewTaskEstTime] = useState('30');
   const [showModal, setShowModal] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -162,13 +160,13 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
       updates.lastStartedAt = 0; // use 0 instead of null/undefined
     }
 
-    if (newStatus === TaskStatus.DONE) {
-      updates.completedAt = now;
-      if (!task.startedAt) updates.startedAt = now;
-      if (!task.minutesSpent && !updates.minutesSpent) {
-        updates.minutesSpent = task.estimatedMinutes || 15;
-      }
-    } else {
+      if (newStatus === TaskStatus.DONE) {
+        updates.completedAt = now;
+        if (!task.startedAt) updates.startedAt = now;
+        if (!task.minutesSpent && !updates.minutesSpent) {
+          updates.minutesSpent = 0; // Finalizes at 0 if no time was tracked moving to done
+        }
+      } else {
       // Not done: clear completedAt safely
       updates.completedAt = 0; // use 0 as safe "not set"
     }
@@ -199,11 +197,10 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
       description: newTaskDesc || 'Sem descrição adicional.',
       status: TaskStatus.PENDING,
       priority: newTaskPriority,
-      category: newTaskCategory,
-      estimatedMinutes: parseInt(newTaskEstTime) || 0,
+      category: newTaskCategory || 'Geral',
       createdAt: Date.now(),
       dueDate: newTaskDueDate ? new Date(newTaskDueDate).getTime() : undefined,
-      isArchived: false
+      isArchived: false,
     };
 
     onAddTask(newTask);
@@ -217,7 +214,6 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
     setNewTaskCategory('');
     setNewTaskPriority(TaskPriority.MEDIUM);
     setNewTaskDueDate('');
-    setNewTaskEstTime('30');
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -500,7 +496,7 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
                     Data Limite (Opcional)
@@ -510,18 +506,6 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                     className="w-full bg-black/20 border border-card-border rounded-2xl p-4 text-hub-text focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
                     value={newTaskDueDate}
                     onChange={(e) => setNewTaskDueDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
-                    Estimativa (min)
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full bg-black/20 border border-card-border rounded-2xl p-4 text-hub-text focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder-hub-muted"
-                    placeholder="30"
-                    value={newTaskEstTime}
-                    onChange={(e) => setNewTaskEstTime(e.target.value)}
                   />
                 </div>
               </div>
