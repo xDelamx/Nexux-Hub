@@ -18,11 +18,9 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebas
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { storage, db } from '../lib/firebase';
 
-// Fix: correct worker path for pdfjs-dist v5 + Vite
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url,
-).toString();
+// Fix PDF.js worker: use CDN pointing to exact installed version (5.4.530)
+// new URL(import.meta.url) fails in Vite production builds on Vercel
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.mjs';
 
 type ModalType = 'NOTEBOOK' | 'SECTION' | 'PAGE' | null;
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
