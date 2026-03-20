@@ -360,15 +360,31 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                   <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
                     Prioridade
                   </label>
-                  <select
-                    value={newTaskPriority}
-                    onChange={(e) => setNewTaskPriority(e.target.value as TaskPriority)}
-                    className="w-full bg-black/20 border border-card-border rounded-2xl p-4 text-hub-text focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value={TaskPriority.LOW}>Baixa</option>
-                    <option value={TaskPriority.MEDIUM}>Média</option>
-                    <option value={TaskPriority.HIGH}>Alta</option>
-                  </select>
+                  <div className="flex gap-2">
+                    {[
+                      { value: TaskPriority.LOW, label: 'Baixa', color: 'emerald', dot: 'bg-emerald-500' },
+                      { value: TaskPriority.MEDIUM, label: 'Média', color: 'amber', dot: 'bg-amber-400' },
+                      { value: TaskPriority.HIGH, label: 'Alta', color: 'red', dot: 'bg-red-500' },
+                    ].map(({ value, label, color, dot }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setNewTaskPriority(value)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 ${
+                          newTaskPriority === value
+                            ? color === 'emerald'
+                              ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
+                              : color === 'amber'
+                              ? 'border-amber-400 bg-amber-400/15 text-amber-400 shadow-lg shadow-amber-400/10'
+                              : 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
+                            : 'border-card-border bg-black/10 text-hub-muted hover:bg-white/5 hover:border-card-border/80'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${newTaskPriority === value ? dot : 'bg-hub-muted/30'}`} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
