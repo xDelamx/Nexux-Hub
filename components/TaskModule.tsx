@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import {
   Plus, Clock, CheckCircle2, Circle, Play, X, GripVertical,
-  Flag, Calendar, Archive, Trash2, RotateCcw, ChevronDown, ChevronUp
+  Flag, Calendar, Archive, Trash2, RotateCcw, ChevronDown, ChevronUp,
+  Loader2
 } from 'lucide-react';
 import { Task, TaskStatus, TaskPriority } from '../types';
 
@@ -29,19 +30,36 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
     if (!task) return;
 
     const updates: Partial<Task> = { status: newStatus };
-    if (newStatus === TaskStatus.IN_PROGRESS && !task.startedAt) {
-      updates.startedAt = Date.now();
-    } else if (newStatus === TaskStatus.DONE) {
-      updates.completedAt = Date.now();
-      if (task.startedAt) {
-        updates.minutesSpent = Math.max(1, Math.floor((Date.now() - task.startedAt) / 60000));
-      } else {
+    const now = Date.now();
+
+    // ─── Time Tracking Logic ──────────────────────────────────────────────────
+    if (newStatus === TaskStatus.IN_PROGRESS) {
+      // START / RESUME: Task is moving to "In Progress"
+      updates.lastStartedAt = now;
+      if (!task.startedAt) updates.startedAt = now; // First time it starts
+    } else {
+      // PAUSE / STOP: Task is moving OUT of "In Progress"
+      if (task.status === TaskStatus.IN_PROGRESS && task.lastStartedAt) {
+        const diffMs = now - task.lastStartedAt;
+        const diffMin = Math.floor(diffMs / 60000); // Only count full minutes
+        // We accumulate minutesSpent. If it's the first time 0+diff, otherwise prev+diff.
+        updates.minutesSpent = (task.minutesSpent || 0) + diffMin;
+      }
+      // If moving out of progress, we clear the current session marker
+      updates.lastStartedAt = undefined as any;
+    }
+
+    if (newStatus === TaskStatus.DONE) {
+      updates.completedAt = now;
+      // If it was already done but moved back and done again, we might want to ensure 
+      // minutesSpent exists. If it never went through "In Progress", fallback to estimate.
+      if (!updates.minutesSpent && !task.minutesSpent) {
         updates.minutesSpent = task.estimatedMinutes || 15;
       }
     } else if (newStatus === TaskStatus.PENDING) {
-      updates.startedAt = undefined as any; // Firestore deleteField if needed, or just undefined
       updates.completedAt = undefined as any;
-      updates.minutesSpent = undefined as any;
+      // We do NOT clear minutesSpent or startedAt when moving back to pending, 
+      // as it's now a "pause" mechanism.
     }
 
     onUpdateTask(id, updates);
@@ -84,7 +102,7 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
   const resetForm = () => {
     setNewTaskTitle('');
     setNewTaskDesc('');
-    setNewTaskCategory('Geral');
+    setNewTaskCategory('');
     setNewTaskPriority(TaskPriority.MEDIUM);
     setNewTaskDueDate('');
     setNewTaskEstTime('30');
@@ -242,10 +260,10 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                     </div>
 
                     <div className="flex flex-col items-end">
-                      {status === TaskStatus.DONE ? (
-                        <div className="flex items-center text-emerald-500 text-[10px] font-black tracking-wider">
-                          <CheckCircle2 size={10} className="mr-1" />
-                          {task.minutesSpent} MIN
+                      {(status === TaskStatus.DONE || (task.minutesSpent && task.minutesSpent > 0)) ? (
+                        <div className={`flex items-center text-[10px] font-black tracking-wider ${status === TaskStatus.DONE ? 'text-emerald-500' : 'text-blue-500/70'}`}>
+                          {status === TaskStatus.IN_PROGRESS ? <Loader2 size={10} className="mr-1 animate-spin" /> : <Clock size={10} className="mr-1" />}
+                          {task.minutesSpent || 0} MIN {status === TaskStatus.IN_PROGRESS && '+'}
                         </div>
                       ) : (
                         task.estimatedMinutes && (
@@ -356,17 +374,24 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                   <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center">
                     Categoria
                   </label>
-                  <select
-                    value={newTaskCategory}
-                    onChange={(e) => setNewTaskCategory(e.target.value)}
-                    className="w-full bg-black/20 border border-card-border rounded-2xl p-4 text-hub-text focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="Geral">Geral</option>
-                    <option value="Segurança">Segurança</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Campo">Campo</option>
-                    <option value="Logística">Logística</option>
-                  </select>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      list="category-suggestions"
+                      className="w-full bg-black/20 border border-card-border rounded-2xl p-4 text-hub-text focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder-hub-muted"
+                      placeholder="Ex: Marketing, Admin..."
+                      value={newTaskCategory}
+                      onChange={(e) => setNewTaskCategory(e.target.value)}
+                    />
+                    <datalist id="category-suggestions">
+                      {Array.from(new Set(tasks.map(t => t.category))).filter(Boolean).map(cat => (
+                        <option key={cat} value={cat} />
+                      ))}
+                    </datalist>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 group-focus-within:opacity-100 transition-opacity">
+                      <ChevronDown size={18} className="text-hub-muted" />
+                    </div>
+                  </div>
                 </div>
               </div>
 

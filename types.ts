@@ -25,6 +25,7 @@ export interface Task {
   estimatedMinutes?: number;
   dueDate?: number;
   isArchived?: boolean;
+  lastStartedAt?: number;
 }
 
 export interface Page {
