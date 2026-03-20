@@ -10,7 +10,12 @@ interface DashboardProps {
 
 const COLORS = ['#004488', '#0066cc', '#3399ff', '#66ccff', '#99ccff'];
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
+interface Trend {
+  percent: number;
+  direction: 'up' | 'down';
+}
+
+const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color: string; trend?: Trend }> = ({ title, value, icon, trend }) => (
   <div className="bg-card border border-card-border p-6 rounded-2xl shadow-sm">
     <div className="flex items-center justify-between mb-4">
       <span className="text-hub-muted text-sm font-medium">{title}</span>
@@ -20,9 +25,14 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
     </div>
     <div className="flex items-baseline space-x-2">
       <span className="text-3xl font-bold text-hub-text">{value}</span>
-      <span className="text-emerald-500 text-sm flex items-center font-medium">
-        <TrendingUp size={14} className="mr-1" /> +12%
-      </span>
+      {trend && (
+        <span className={`text-sm flex items-center font-medium ${
+          trend.direction === 'up' ? 'text-emerald-500' : 'text-red-400'
+        }`}>
+          <TrendingUp size={14} className={`mr-1 ${trend.direction === 'down' ? 'rotate-180' : ''}`} />
+          {trend.direction === 'up' ? '+' : '-'}{trend.percent}%
+        </span>
+      )}
     </div>
   </div>
 );
@@ -30,14 +40,43 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
   const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
 
-  // Cálculo de métricas gerais
+  // Cálculo de métricas gerais com tendência comparando semana atual vs semana anterior
   const stats = useMemo(() => {
+    const now = new Date();
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - now.getDay());
+    startOfThisWeek.setHours(0, 0, 0, 0);
+
+    const startOfLastWeek = new Date(startOfThisWeek);
+    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
+
+    const thisWeekTasks = tasks.filter(t => t.completedAt && t.completedAt >= startOfThisWeek.getTime());
+    const lastWeekTasks = tasks.filter(t => t.completedAt && t.completedAt >= startOfLastWeek.getTime() && t.completedAt < startOfThisWeek.getTime());
+
+    const calcTrend = (current: number, previous: number): Trend | undefined => {
+      if (previous === 0) return undefined; // Sem dados anteriores, não exibe tendência
+      const diff = current - previous;
+      const percent = Math.round(Math.abs((diff / previous) * 100));
+      if (percent === 0) return undefined;
+      return { percent, direction: diff >= 0 ? 'up' : 'down' };
+    };
+
     const totalMinutes = tasks.reduce((acc, t) => acc + (t.minutesSpent || 0), 0);
+    const thisWeekMinutes = thisWeekTasks.reduce((acc, t) => acc + (t.minutesSpent || 0), 0);
+    const lastWeekMinutes = lastWeekTasks.reduce((acc, t) => acc + (t.minutesSpent || 0), 0);
+
     const completed = tasks.filter(t => t.status === TaskStatus.DONE).length;
     const active = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
     const pending = tasks.filter(t => t.status === TaskStatus.PENDING).length;
-    
-    return { totalMinutes, completed, active, pending };
+
+    return {
+      totalMinutes,
+      completed,
+      active,
+      pending,
+      minutesTrend: calcTrend(thisWeekMinutes, lastWeekMinutes),
+      completedTrend: calcTrend(thisWeekTasks.length, lastWeekTasks.length),
+    };
   }, [tasks]);
 
   // Agrupamento de dados para o gráfico de área baseado no filtro selecionado
@@ -105,8 +144,8 @@ const DashboardModule: React.FC<DashboardProps> = ({ tasks }) => {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Cards de Estatísticas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total de Minutos" value={stats.totalMinutes} icon={<Clock size={20} />} color="blue" />
-        <StatCard title="Tarefas Concluídas" value={stats.completed} icon={<CheckCircle size={20} />} color="emerald" />
+        <StatCard title="Total de Minutos" value={stats.totalMinutes} icon={<Clock size={20} />} color="blue" trend={stats.minutesTrend} />
+        <StatCard title="Tarefas Concluídas" value={stats.completed} icon={<CheckCircle size={20} />} color="emerald" trend={stats.completedTrend} />
         <StatCard title="Tarefas em Andamento" value={stats.active} icon={<TrendingUp size={20} />} color="blue" />
         <StatCard title="Pendências" value={stats.pending} icon={<AlertCircle size={20} />} color="amber" />
       </div>
