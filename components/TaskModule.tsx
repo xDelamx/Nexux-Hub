@@ -9,8 +9,15 @@ import { Task, TaskStatus, TaskPriority } from '../types';
 
 // ─── Custom Select Component ─────────────────────────────────────────────────
 interface SelectOption { value: string; label: string; accent?: string; dot?: string; icon?: React.ReactNode; }
-const CustomSelect: React.FC<{ value: string; onChange: (v: string) => void; options: SelectOption[]; placeholder?: string; }> = ({ value, onChange, options, placeholder }) => {
+const CustomSelect: React.FC<{ 
+  value: string; 
+  onChange: (v: string) => void; 
+  options: SelectOption[]; 
+  placeholder?: string;
+  creatable?: boolean;
+}> = ({ value, onChange, options, placeholder, creatable }) => {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const selected = options.find(o => o.value === value);
 
@@ -20,11 +27,20 @@ const CustomSelect: React.FC<{ value: string; onChange: (v: string) => void; opt
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const filteredOptions = options.filter(o => 
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const showCreateOption = creatable && search && !options.some(o => o.label.toLowerCase() === search.toLowerCase());
+
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => {
+          setOpen(o => !o);
+          setSearch('');
+        }}
         className={`w-full flex items-center justify-between gap-3 bg-black/20 border rounded-2xl px-4 py-3.5 text-left transition-all ${
           open ? 'border-blue-500/60 ring-2 ring-blue-600/10' : 'border-card-border hover:border-card-border/80'
         }`}
@@ -40,26 +56,64 @@ const CustomSelect: React.FC<{ value: string; onChange: (v: string) => void; opt
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-2 w-full bg-sidebar border border-card-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-          {options.map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full flex items-center justify-between gap-3 px-4 py-3 transition-all text-left group ${
-                value === opt.value ? 'bg-blue-600/10' : 'hover:bg-white/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                {opt.dot && <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dot}`} />}
-                {opt.icon && opt.icon}
-                <span className={`text-sm font-bold ${value === opt.value ? opt.accent || 'text-blue-400' : 'text-hub-text group-hover:text-hub-text'}`}>
-                  {opt.label}
-                </span>
+        <div className="absolute z-50 mt-2 w-full bg-sidebar border border-card-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col">
+          {creatable && (
+            <div className="p-2 border-b border-card-border/50 bg-black/10">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Pesquisar ou criar..."
+                className="w-full bg-black/20 border border-card-border/50 rounded-xl px-3 py-2 text-xs text-hub-text focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && search) {
+                    onChange(search);
+                    setOpen(false);
+                  }
+                }}
+              />
+            </div>
+          )}
+          
+          <div className="max-h-60 overflow-y-auto custom-scrollbar">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => { onChange(opt.value); setOpen(false); }}
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-3 transition-all text-left group ${
+                    value === opt.value ? 'bg-blue-600/10' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {opt.dot && <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dot}`} />}
+                    {opt.icon && opt.icon}
+                    <span className={`text-sm font-bold ${value === opt.value ? opt.accent || 'text-blue-400' : 'text-hub-text group-hover:text-hub-text'}`}>
+                      {opt.label}
+                    </span>
+                  </div>
+                  {value === opt.value && <Check size={14} className="text-blue-400 flex-shrink-0" />}
+                </button>
+              ))
+            ) : !showCreateOption && (
+              <div className="px-4 py-8 text-center text-xs text-hub-muted italic">
+                Nenhum resultado encontrado
               </div>
-              {value === opt.value && <Check size={14} className="text-blue-400 flex-shrink-0" />}
-            </button>
-          ))}
+            )}
+
+            {showCreateOption && (
+              <button
+                type="button"
+                onClick={() => { onChange(search); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-4 py-3 hover:bg-blue-600/10 transition-all text-left text-blue-400 border-t border-card-border/30 group"
+              >
+                <Plus size={14} className="group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-bold">Criar "{search}"</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -437,8 +491,9 @@ const TaskModule: React.FC<TaskModuleProps> = ({ tasks, onAddTask, onUpdateTask,
                     value={newTaskCategory}
                     onChange={setNewTaskCategory}
                     placeholder="Selecionar categoria..."
+                    creatable
                     options={[
-                      ...Array.from(new Set(['Geral', ...tasks.map(t => t.category).filter(Boolean)]))
+                      ...Array.from(new Set(['Geral', 'Tecnologia', 'Marketing', 'Admin', ...tasks.map(t => t.category).filter(Boolean)]))
                         .map(cat => ({ value: cat, label: cat }))
                     ]}
                   />

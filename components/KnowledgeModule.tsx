@@ -15,6 +15,54 @@ import { db } from '../lib/firebase';
 type ModalType = 'NOTEBOOK' | 'SECTION' | 'PAGE' | null;
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+// ─── Custom Select Component ─────────────────────────────────────────────────
+interface SelectOption { value: string; label: string; }
+const CustomSelect: React.FC<{ value: string; onChange: (v: string) => void; options: SelectOption[]; placeholder?: string; }> = ({ value, onChange, options, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find(o => o.value === value);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
+        className={`flex items-center gap-2 bg-black/20 border rounded-lg px-3 py-1.5 transition-all text-[10px] font-bold uppercase tracking-wider ${
+          open ? 'border-blue-500/60 ring-1 ring-blue-500/20' : 'border-card-border hover:border-blue-500/50'
+        }`}
+      >
+        <span className="text-hub-muted min-w-[50px] text-center">
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown size={12} className={`text-hub-muted transition-transform duration-200 ${open ? 'rotate-180 text-blue-400' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 left-0 min-w-[80px] bg-sidebar border border-card-border rounded-xl shadow-xl shadow-black/40 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(opt.value); setOpen(false); }}
+              className={`w-full px-4 py-2 transition-all text-left text-[10px] font-bold uppercase tracking-wider ${
+                value === opt.value ? 'bg-blue-600/20 text-blue-400' : 'text-hub-muted hover:bg-white/5 hover:text-hub-text'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Rich Text Toolbar ────────────────────────────────────────────────────────
 // ─── Rich Text Toolbar ────────────────────────────────────────────────────────
 const ToolbarBtn: React.FC<{ onClick: () => void; title: string; active?: boolean; children: React.ReactNode }> = ({ onClick, title, active, children }) => (
@@ -65,23 +113,21 @@ const RichToolbar: React.FC<{ activeTools: Set<string> }> = ({ activeTools }) =>
       </div>
       <ToolbarSep />
 
-      <div className="flex items-center gap-2 px-2">
-        <select
-          onMouseDown={(e) => e.stopPropagation()}
-          onChange={(e) => exec('fontSize', e.target.value)}
-          defaultValue=""
-          className="bg-black/20 border border-card-border text-hub-muted text-[10px] font-bold uppercase tracking-wider rounded-lg px-3 py-1.5 cursor-pointer hover:border-blue-500/50 transition-colors outline-none focus:ring-1 focus:ring-blue-500/30 font-sans"
-          title="Tamanho da fonte"
-        >
-          <option value="" disabled>Tamanho</option>
-          <option value="1">XS</option>
-          <option value="2">SM</option>
-          <option value="3">MD</option>
-          <option value="4">LG</option>
-          <option value="5">XL</option>
-          <option value="6">2XL</option>
-          <option value="7">3XL</option>
-        </select>
+      <div className="flex items-center gap-2 px-1">
+        <CustomSelect 
+          value=""
+          placeholder="TAMANHO"
+          onChange={(v) => exec('fontSize', v)}
+          options={[
+            { value: '1', label: 'XS' },
+            { value: '2', label: 'SM' },
+            { value: '3', label: 'MD' },
+            { value: '4', label: 'LG' },
+            { value: '5', label: 'XL' },
+            { value: '6', label: '2XL' },
+            { value: '7', label: '3XL' },
+          ]}
+        />
 
         <label title="Cor do texto" className="flex items-center cursor-pointer group bg-black/20 px-2 py-1 rounded-lg border border-card-border hover:border-blue-500/50 transition-all">
           <Type size={12} className="text-hub-muted group-hover:text-blue-400 mr-2" />
